@@ -10,7 +10,7 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@sharedTypes/*": ["../hybrid-types/*"]
+      "@sharedTypes/*": ["../hybrid-types-main/*"]
     }
   },
   "include": ["./*.js", "src/**/*.ts", "test/**/*.ts"]
