@@ -15,10 +15,10 @@ type PasskeyUserGet = {
   devices: AuthDevice[];
 };
 
-type AuthDevice = AuthenticatorDevice &
-  Document & {
-    email: string;
-  };
+type AuthDevice = AuthenticatorDevice & {
+  _id: Types.ObjectId;
+  email: string;
+};
 
 type Challenge = {
   challenge: Base64URLString;
