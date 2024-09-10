@@ -1,7 +1,7 @@
 import {LoginResponse, UserResponse} from '@sharedTypes/MessageTypes';
 import {NextFunction, Request, Response} from 'express';
 import CustomError from '../../classes/CustomError';
-import {User, UserWithLevel} from '@sharedTypes/DBTypes';
+import {User, UserWithLevel, UserWithNoPassword} from '@sharedTypes/DBTypes';
 import {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
@@ -302,7 +302,7 @@ const verifyAuthentication = async (
     await challengeModel.findOneAndDelete({email: req.body.email});
 
     // Generate and send JWT token
-    const userResponse = await fetchData<UserResponse>(
+    const userResponse = await fetchData<UserWithNoPassword>(
       AUTH_URL + '/api/v1/users/' + user.userId,
     );
 
@@ -311,10 +311,12 @@ const verifyAuthentication = async (
       return;
     }
 
+    console.log(userResponse);
+
     const token = jwt.sign(
       {
-        user_id: userResponse.user.user_id,
-        level_name: userResponse.user.level_name,
+        user_id: userResponse.user_id,
+        level_name: userResponse.level_name,
       },
       JWT_SECRET,
     );
@@ -322,7 +324,7 @@ const verifyAuthentication = async (
     const message: LoginResponse = {
       message: 'Login successful',
       token,
-      user: userResponse.user,
+      user: userResponse,
     };
 
     res.json(message);
