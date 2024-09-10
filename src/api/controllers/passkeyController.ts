@@ -19,10 +19,11 @@ import {
   verifyRegistrationResponse,
   VerifyRegistrationResponseOpts,
 } from '@simplewebauthn/server';
-import {AuthDevice, Challenge, PasskeyUserGet} from '../../types/PasskeyTypes';
+import {Challenge, PasskeyUserGet} from '../../types/PasskeyTypes';
 import challengeModel from '../models/challengeModel';
 import passkeyUserModel from '../models/passkeyUserModel';
 import authenticatorDeviceModel from '../models/authenticatorDeviceModel';
+import jwt from 'jsonwebtoken';
 
 // check environment variables
 if (
@@ -245,7 +246,7 @@ const verifyAuthentication = async (
     {},
     {email: string; authResponse: AuthenticationResponseJSON}
   >,
-  res: Response,
+  res: Response<LoginResponse>,
   next: NextFunction,
 ) => {
   try {
@@ -276,6 +277,7 @@ const verifyAuthentication = async (
         NODE_ENV === 'development'
           ? `http://${RP_ID}:5173`
           : `https://${RP_ID}`,
+      expectedRPID: RP_ID,
       authenticator: {
         credentialPublicKey: Buffer.from(user.devices[0].credentialPublicKey),
         credentialID: user.devices[0].credentialID,
@@ -299,7 +301,31 @@ const verifyAuthentication = async (
     // Clear challenge from DB after successful authentication
     await challengeModel.findOneAndDelete({email: req.body.email});
 
-    // TODO: Generate and send JWT token
+    // Generate and send JWT token
+    const userResponse = await fetchData<UserResponse>(
+      AUTH_URL + '/api/v1/users/' + user.userId,
+    );
+
+    if (!userResponse) {
+      next(new CustomError('User not found', 404));
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        user_id: userResponse.user.user_id,
+        level_name: userResponse.user.level_name,
+      },
+      JWT_SECRET,
+    );
+
+    const message: LoginResponse = {
+      message: 'Login successful',
+      token,
+      user: userResponse.user,
+    };
+
+    res.json(message);
   } catch (error) {
     next(new CustomError((error as Error).message, 500));
   }
